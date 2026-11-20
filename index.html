@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfers Dashboard</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Inter,Arial,sans-serif;background:#F5F7FA;color:#0B1D3A;font-size:14px}
+header{background:#0B1D3A;color:#fff;padding:14px 22px;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:20px} header p{margin:2px 0 0;color:#9fb3d1;font-size:12px}
+.tabs{display:flex;gap:6px;margin:12px 0 0;flex-wrap:wrap}
+.tabs button{border:0;background:rgba(255,255,255,.1);color:#cfdcf0;padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:700}
+.tabs button:hover{background:rgba(255,255,255,.2)}
+.tabs button.on{background:#2DD4BF;color:#0B1D3A}
+.filters{background:#fff;padding:12px 22px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid #E4E9F0}
+.filters label{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;display:block;margin-bottom:4px}
+.filters select,.filters input{border:1px solid #E4E9F0;border-radius:9px;padding:8px 10px;min-width:140px}
+.btn{border:0;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer}
+.btn.p{background:#2DD4BF;color:#0B1D3A} .btn.g{background:#fff;border:1px solid #E4E9F0}
+main{padding:16px 22px 30px;max-width:1600px;margin:0 auto}
+.hide{display:none!important}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.kpi{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.kpi span{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px}
+.kpi b{display:block;font-size:28px;margin:6px 0 2px} .kpi small{color:#64748B;font-size:12px}
+.card{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-top:14px}
+.card h3{margin:0 0 4px} .hint{color:#64748B;font-size:12px;margin-bottom:10px}
+table{border-collapse:collapse;width:100%;font-size:12.5px} th{background:#F0F4F9;text-align:left;padding:9px 10px;font-size:11px;color:#64748B;text-transform:uppercase} td{padding:9px 10px;border-bottom:1px solid #E4E9F0;text-align:left;white-space:nowrap}
+.bar{width:90px;height:8px;background:#E8EDF3;border-radius:5px;display:inline-block;overflow:hidden;vertical-align:middle} .bar i{display:block;height:100%;background:#F97316}
+.tag{padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700} .tag.g{background:#DCFCE7;color:#15803d} .tag.a{background:#FEF3C7;color:#b45309} .tag.o{background:#FFEDD5;color:#c2410c} .tag.r{background:#FEE2E2;color:#b91c1c}
+.insights{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.insights .card{margin-top:0}
+.ins{border-top:4px solid #64748B} .ins.red{border-color:#DC2626} .ins.orange{border-color:#F97316} .ins.green{border-color:#16A34A} .ins.amber{border-color:#F59E0B}
+.ins h4{margin:6px 0} .ins p{color:#475569;font-size:13px;line-height:1.5}
+.alerts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px} @media(max-width:900px){.alerts{grid-template-columns:1fr 1fr}}
+.alert{background:#fff;border-left:4px solid #64748B;border-radius:12px;padding:12px 14px;cursor:pointer} .alert:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)} .alert b{font-size:22px;display:block} .alert small{color:#64748B}
+.state{text-align:center;padding:50px 20px;background:#fff;border-radius:14px;margin-top:20px} .state h3{margin:8px 0} .state p{color:#64748B}
+.spinner{width:34px;height:34px;border:4px solid #E4E9F0;border-top-color:#2DD4BF;border-radius:50%;margin:0 auto 10px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spinner{animation-duration:2s}}
+.trendwrap{display:flex;gap:2px} .trendwrap span{flex:1;text-align:center;font-size:10px;color:#64748B}
+</style>
+</head>
+<body>
+<header>
+<h1>Transfers Dashboard</h1><p>Logistics Operations Control Tower &nbsp;•&nbsp; Last Updated: <b id="updAt">Loading...</b> &nbsp;•&nbsp; <span id="asOf"></span></p>
+<div class="tabs" id="tabs">
+<button data-tab="overview" class="on">Overview</button>
+<button data-tab="sla">SLA Performance</button>
+<button data-tab="bottlenecks">Bottlenecks</button>
+<button data-tab="hubs">Hub Analysis</button>
+<button data-tab="routes">Route Analysis</button>
+</div>
+</header>
+
+<div class="filters">
+<div><label>Origin Hub</label><select id="fOrigin"><option value="">All origins</option></select></div>
+<div><label>Destination Hub</label><select id="fDest"><option value="">All destinations</option></select></div>
+<div><label>Company</label><select id="fCompany"><option value="">All companies</option></select></div>
+<div><label>Status</label><select id="fStatus"><option value="">All statuses</option><option value="__OPEN__">All open</option></select></div>
+<div><label>Route</label><select id="fRoute"><option value="">All routes</option></select></div>
+<div><label>Search</label><input id="fSearch" placeholder="Delhi, LOG100001..."></div>
+<div style="display:flex;gap:8px;align-items:flex-end"><button class="btn p" id="apply">Apply</button><button class="btn g" id="reset">Reset</button><button class="btn p" id="refresh">Refresh Data</button></div>
+</div>
+
+<main>
+<div id="errBox" class="state hide"><h3>Unable to load data</h3><p id="errMsg"></p><button class="btn p" onclick="loadData()">Retry</button></div>
+<div id="emptyBox" class="state hide"><h3>No transfers found for these filters.</h3><p>Try resetting the filters.</p><button class="btn p" onclick="resetFilters()">Reset filters</button></div>
+<div id="loading" class="state"><div class="spinner"></div><h3>Fetching data, please wait...</h3><p>This may take a few seconds.</p></div>
+
+<div id="content" class="hide">
+
+<div id="tab-overview">
+<div id="headline" style="font-size:24px;font-weight:800;margin:6px 0 4px"></div>
+<div id="headSub" style="color:#64748B;margin-bottom:12px"></div>
+<div class="alerts" id="alerts"></div>
+
+<h2>Key Metrics</h2>
+<div class="kpis" id="kpis"></div>
+
+<h2>Key Insights</h2>
+<div class="insights" id="insights"></div>
+
+<h2>Transfer Trends (Last 14 days by Created)</h2>
+<div class="card"><div id="trendChart"></div><div class="trendwrap" id="trendLabels"></div><div class="hint" id="trendNote"></div></div>
+<h2>Status Distribution</h2>
+<div class="card"><div id="statusList"></div></div>
+</div>
+
+<div id="tab-sla" class="hide">
+<h2>SLA Performance — Route-wise Total SLA, Critical &gt; 1.5× SLA</h2>
+<div class="card"><div id="slaCards"></div><p class="hint" style="margin-top:10px">Total SLA per route = Transit SLA (1.25 × route median, rounded up to 0.5h) + 10h for the other stages.</p></div>
+<h2>Delay Distribution</h2>
+<div class="card"><div id="delayList"></div></div>
+</div>
+
+<div id="tab-bottlenecks" class="hide">
+<h2>Stage Performance &amp; Bottlenecks</h2>
+<div class="card"><div id="bnHead" style="font-weight:700;margin-bottom:10px"></div><div style="overflow:auto"><table id="stageTbl"></table></div><p class="hint">Delay Contribution = total hours beyond each stage's SLA limit. Rank 1 = biggest bottleneck. Last Mile = Destination Hub to the customer.</p></div>
+<h2>Open Transfer Risk</h2>
+<div class="card"><div id="riskHead" style="font-weight:700;margin-bottom:10px"></div><div style="overflow:auto"><table id="riskTbl"></table></div></div>
+</div>
+
+<div id="tab-hubs" class="hide">
+<h2>Origin Hub Analysis</h2>
+<div class="card"><div style="overflow:auto"><table id="tblO"></table></div></div>
+<h2>Destination Hub Analysis</h2>
+<div class="card"><div style="overflow:auto"><table id="tblD"></table></div></div>
+<h2>Stage Breach Heatmap — Origin Hub (Breach %)</h2>
+<div class="card"><div style="overflow:auto"><table id="heat"></table></div></div>
+</div>
+
+<div id="tab-routes" class="hide">
+<h2>Worst 5 Routes</h2>
+<div class="card"><div id="worstR"></div></div>
+<h2>Best 5 Routes</h2>
+<div class="card"><div id="bestR"></div></div>
+<h2>All Routes</h2>
+<div class="card"><div style="overflow:auto"><table id="routeTbl"></table></div></div>
+<h2>Companies</h2>
+<div class="card"><div style="overflow:auto"><table id="coTbl"></table></div></div>
+<h2>Quantity Analysis</h2>
+<div class="card"><div id="qtyInfo"></div><div id="qtyBands"></div></div>
+</div>
+
+</div>
+</main>
+
+<script>
+var DATA = null;
+var TABS = ['overview','sla','bottlenecks','hubs','routes'];
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function nf(v,d){ if(v==null||isNaN(v)) return '-'; return Number(v).toLocaleString('en-US',{maximumFractionDigits:(d==null?0:d)}); }
+function fh(v){ return v==null?'–':nf(v,1)+'h'; }
+function fp(v){ return v==null?'–':nf(v,1)+'%'; }
+function tag(v, overall){ if(v==null) return '-'; var c='g'; if(overall!=null && v>overall+5) c='r'; else if(overall!=null && v>overall-5) c='o'; else if(v>10) c='a'; return '<span class="tag '+c+'">'+fp(v)+'</span>'; }
+
+function readFilters(){
+  return { origin:$('fOrigin').value, destination:$('fDest').value, company:$('fCompany').value, status:$('fStatus').value, route:$('fRoute').value, search:$('fSearch').value.trim(), comparison:'WoW' };
+}
+function loadData(){
+  $('loading').classList.remove('hide');
+  $('errBox').classList.add('hide');
+  $('emptyBox').classList.add('hide');
+  $('content').classList.add('hide');
+  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){
+    $('loading').classList.add('hide');
+    $('errBox').classList.remove('hide');
+    $('errMsg').textContent = (e && e.message) ? e.message : String(e);
+  }).getDashboardData(readFilters(), true);
+}
+function fillSel(id, label, vals){
+  var el=$(id), cur=el.value;
+  var h='<option value="">'+label+'</option>';
+  vals.forEach(function(v){ h+='<option value="'+esc(v)+'">'+esc(v)+'</option>'; });
+  el.innerHTML=h; el.value=cur;
+}
+
+// ===== NAV TABS =====
+function setTab(t){
+  document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.tab===t); });
+  TABS.forEach(function(n){ $('tab-'+n).classList.toggle('hide', n!==t); });
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+$('tabs').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) setTab(b.dataset.tab); });
+$('alerts').addEventListener('click', function(e){ var a=e.target.closest('.alert'); if(a && a.dataset.go) setTab(a.dataset.go); });
+
+function render(d){
+  DATA=d;
+  $('loading').classList.add('hide');
+  $('emptyBox').classList.add('hide');
+  if(d.empty){ $('emptyBox').classList.remove('hide'); return; }
+  $('content').classList.remove('hide');
+  var L=d.meta.sla;
+  $('updAt').textContent=d.meta.generatedAtLabel;
+  $('asOf').textContent='Data as of '+d.meta.refTimeLabel+' | Analysing '+nf(d.meta.rowsInView)+' of '+nf(d.meta.totalRowsInSheet)+' transfers';
+  fillSel('fOrigin','All origins',d.options.origins);
+  fillSel('fDest','All destinations',d.options.destinations);
+  fillSel('fCompany','All companies',d.options.companies);
+  var stEl=$('fStatus'); var curSt=stEl.value;
+  var sh='<option value="">All statuses</option><option value="__OPEN__">All open</option>';
+  d.options.statuses.forEach(function(v){ sh+='<option value="'+esc(v)+'">'+esc(v)+'</option>'; });
+  stEl.innerHTML=sh; stEl.value=curSt;
+  fillSel('fRoute','All routes',d.options.routes);
+
+  var k=d.kpis;
+  $('headline').innerHTML='<span style="background:#2DD4BF;padding:0 8px;border-radius:7px">'+nf(k.onTimePct,1)+'%</span> of delivered transfers met their route SLA';
+  $('headSub').textContent=nf(k.total)+' transfers in view • '+nf(k.open)+' open • '+nf(k.openRisk)+' at risk';
+  $('alerts').innerHTML=d.alerts.map(function(a){ return '<div class="alert" data-go="'+esc(a.go)+'" style="border-color:'+(a.tone==='red'?'#DC2626':a.tone==='amber'?'#F59E0B':'#16A34A')+'"><small>'+esc(a.label)+'</small><b>'+esc(a.value)+'</b><small>'+esc(a.sub)+'</small></div>'; }).join('');
+
+  var kpis=[
+    ['Total Transfers', nf(k.total), 'all rows in view'],
+    ['Delivered', nf(k.delivered), nf(k.delivered/k.total*100,1)+'% of transfers'],
+    ['Open Transfers', nf(k.open), nf(k.open/k.total*100,1)+'% still in progress'],
+    ['On-Time %', fp(k.onTimePct), 'within route SLA'],
+    ['SLA Breach %', fp(k.breachPct), 'beyond route SLA'],
+    ['Critical Transfers', nf(k.critical), '> 1.5× route SLA'],
+    ['Avg Cycle Time', fh(k.avgCycle), 'route-wise SLA'],
+    ['Avg Delay', fh(k.avgDelay), fh(k.avgDelayWhenLate)+' when late'],
+    ['Total Quantity', nf(k.totalQty), 'units'],
+    ['Delayed Transfers', nf(k.delayed), 'delivered beyond SLA'],
+    ['Avg Picking', fh(k.avgPicking), 'breach >'+L.picking+'h'],
+    ['Avg Manifest', fh(k.avgManifest), 'breach >'+L.manifest+'h'],
+    ['Avg Handover', fh(k.avgHandover), 'breach >'+L.handover+'h'],
+    ['Avg Transit', fh(k.avgTransit), 'route SLA'],
+    ['Avg Last-Mile', fh(k.avgLastMile), 'breach >'+L.lastMile+'h'],
+    ['Primary Bottleneck', k.primaryBottleneck?k.primaryBottleneck.label:'None', k.primaryBottleneck?fp(k.primaryBottleneck.share)+' of stage delay':'no breach'],
+    ['Open SLA Risk', nf(k.openRisk), fp(k.openRiskPct)+' of assessed open'],
+    ['Avg Qty / Transfer', nf(k.avgQty,1), 'units per transfer']
+  ];
+  $('kpis').innerHTML=kpis.map(function(x){ return '<div class="kpi"><span>'+x[0]+'</span><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></div>'; }).join('');
+
+  $('insights').innerHTML=d.insights.map(function(ins){ return '<div class="card ins '+ins.tone+'"><small style="font-weight:800;color:#64748B;text-transform:uppercase">'+esc(ins.title)+'</small><h4>'+esc(ins.headline)+'</h4>'+ins.facts.map(function(f){ return '<div><b>'+esc(f[1])+'</b> <span style="color:#64748B;font-size:12px">'+esc(f[0])+'</span></div>'; }).join('')+'<p>'+esc(ins.note||'')+'</p></div>'; }).join('');
+
+  // Trends
+  var maxC=Math.max.apply(null, d.trends.created.concat([1]));
+  $('trendChart').innerHTML='<div style="display:flex;gap:2px;align-items:flex-end;height:120px">'+d.trends.created.map(function(v){ return '<div title="'+v+' created" style="flex:1;background:#2DD4BF;border-radius:4px 4px 0 0;height:'+Math.max(4, v/maxC*120)+'px"></div>'; }).join('')+'</div>';
+  $('trendLabels').innerHTML=d.trends.labels.map(function(l){ return '<span>'+esc(l)+'</span>'; }).join('');
+  $('trendNote').textContent='Bars = transfers created per day. Delayed per day: '+d.trends.delayed.join(', ');
+
+  $('statusList').innerHTML=d.status.map(function(s){ return '<div style="margin:6px 0"><b>'+esc(s.status)+'</b> — '+nf(s.count)+' ('+fp(s.pct)+') <span class="bar"><i style="width:'+s.pct+'%"></i></span></div>'; }).join('');
+
+  // SLA
+  var s=d.sla;
+  $('slaCards').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">'+
+    [['On-Time', nf(s.onTime)+' • '+fp(s.onTimePct)],['Delayed (all)', nf(s.delayedAll)+' • '+fp(s.breachPct)],['Critical', nf(s.critical)+' • '+fp(s.criticalPct)],['Avg Delay', fh(s.avgDelay)],['Avg Delay When Late', fh(s.avgDelayWhenLate)],['Max Delay', fh(s.maxDelay)],['Median / Max Cycle', fh(s.medianCycle)+' / '+fh(s.maxCycle)]].map(function(x){ return '<div style="background:#F5F7FA;border-radius:10px;padding:10px"><span style="font-size:11px;color:#64748B">'+x[0]+'</span><b style="display:block;font-size:18px">'+x[1]+'</b></div>'; }).join('')+'</div>';
+  $('delayList').innerHTML=d.delayDist.buckets.map(function(b){ return '<div style="margin:6px 0"><b>'+esc(b.label)+'</b> — '+nf(b.count)+' ('+fp(b.pct)+') <span class="bar"><i style="width:'+b.pct+'%"></i></span></div>'; }).join('')+'<p class="hint">'+esc(d.delayDist.note)+'</p>';
+
+  // Stages
+  var p=d.stages.filter(function(x){ return x.rank===1; })[0];
+  $('bnHead').textContent=p ? (p.label+' is the primary bottleneck, contributing '+fp(p.delaySharePct)+' of stage delay.') : 'No stage breach.';
+  $('stageTbl').innerHTML='<tr><th>Stage</th><th>Avg Lag</th><th>Median</th><th>Breach Rule</th><th>Breaches</th><th>Breach %</th><th>Delay Contribution</th><th>Delay Share</th><th>Rank</th></tr>'+
+    d.stages.map(function(x){ return '<tr><td><b>'+esc(x.label)+'</b></td><td>'+fh(x.avg)+'</td><td>'+fh(x.median)+'</td><td>'+(x.key==='transit'?'Route SLA':'> '+x.limit+'h')+'</td><td>'+nf(x.breachCount)+'</td><td>'+fp(x.breachPct)+'</td><td>'+nf(x.delayHrs)+'h</td><td>'+fp(x.delaySharePct)+' <span class="bar"><i style="width:'+(x.delaySharePct||0)+'%"></i></span></td><td>'+x.rank+'</td></tr>'; }).join('');
+
+  $('riskHead').textContent=d.openRisk.atRisk+' open transfers are currently beyond their stage SLA ('+fp(d.openRisk.riskPct)+' of assessed).';
+  $('riskTbl').innerHTML='<tr><th>Open Status</th><th>Open</th><th>Within SLA</th><th>At Risk</th><th>Risk %</th></tr>'+
+    d.openRisk.stages.map(function(x){ return '<tr><td><b>'+esc(x.status)+'</b></td><td>'+nf(x.open)+'</td><td>'+nf(x.within)+'</td><td>'+nf(x.atRisk)+'</td><td>'+tag(x.riskPct,25)+'</td></tr>'; }).join('');
+
+  // Hubs
+  function hubTable(list){
+    return '<tr><th>Hub</th><th>Transfers</th><th>Qty</th><th>Avg Cycle</th><th>Avg Delay</th><th>On-Time %</th><th>Breach %</th><th>Open</th><th>Primary Bottleneck</th></tr>'+
+    list.map(function(x){ return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+nf(x.transfers)+'</td><td>'+nf(x.qty)+'</td><td>'+fh(x.avgCycle)+'</td><td>'+fh(x.avgDelay)+'</td><td>'+fp(x.onTimePct)+'</td><td>'+tag(x.breachPct, d.sla.breachPct)+'</td><td>'+nf(x.open)+'</td><td>'+esc(x.bottleneck||'-')+' '+(x.bottleneckShare!=null?'<small>'+fp(x.bottleneckShare)+'</small>':'')+'</td></tr>'; }).join('');
+  }
+  $('tblO').innerHTML=hubTable(d.hubs.origin);
+  $('tblD').innerHTML=hubTable(d.hubs.destination);
+  $('heat').innerHTML='<tr><th>Origin Hub</th>'+d.hubs.stageLabels.map(function(l){ return '<th>'+esc(l)+' breach %</th>'; }).join('')+'</tr>'+
+    d.hubs.origin.map(function(x){ return '<tr><td><b>'+esc(x.name)+'</b></td>'+x.stageBreachPct.map(function(v){ return '<td>'+tag(v, 15)+'</td>'; }).join('')+'</tr>'; }).join('');
+
+  // Routes
+  function rankHtml(list){
+    if(!list.length) return '<p>No data</p>';
+    return list.map(function(x,i){ return '<div style="padding:8px 10px;background:#F5F7FA;border-radius:10px;margin:6px 0"><b>'+(i+1)+'. '+esc(x.name)+'</b> — Breach '+fp(x.breachPct)+' • On-time '+fp(x.onTimePct)+' • Avg delay '+fh(x.avgDelay)+' • '+nf(x.transfers)+' transfers</div>'; }).join('');
+  }
+  $('worstR').innerHTML=rankHtml(d.routes.worst);
+  $('bestR').innerHTML=rankHtml(d.routes.best);
+  $('routeTbl').innerHTML='<tr><th>Route</th><th>Transfers</th><th>Avg Transit</th><th>Transit SLA</th><th>Total SLA</th><th>Avg Cycle</th><th>Avg Delay</th><th>Breaches</th><th>Breach %</th><th>On-Time %</th></tr>'+
+    d.routes.all.map(function(x){ return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+nf(x.transfers)+'</td><td>'+fh(x.avgTransit)+'</td><td>'+fh(x.transitSla)+'</td><td>'+fh(x.totalSla)+'</td><td>'+fh(x.avgCycle)+'</td><td>'+fh(x.avgDelay)+'</td><td>'+nf(x.breachCount)+'</td><td>'+tag(x.breachPct, d.sla.breachPct)+'</td><td>'+fp(x.onTimePct)+'</td></tr>'; }).join('');
+  $('coTbl').innerHTML='<tr><th>Company</th><th>Transfers</th><th>Qty</th><th>Delivered</th><th>Open</th><th>On-Time %</th><th>Breach %</th><th>Avg Cycle</th><th>Avg Delay</th></tr>'+
+    d.companies.map(function(x){ return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+nf(x.transfers)+'</td><td>'+nf(x.qty)+'</td><td>'+nf(x.delivered)+'</td><td>'+nf(x.open)+'</td><td>'+fp(x.onTimePct)+'</td><td>'+fp(x.breachPct)+'</td><td>'+fh(x.avgCycle)+'</td><td>'+fh(x.avgDelay)+'</td></tr>'; }).join('');
+  $('qtyInfo').innerHTML='<b>Total Qty: '+nf(d.qty.total)+' • Avg / Transfer: '+nf(d.qty.avg,1)+' • Median: '+nf(d.qty.median,0)+'</b><p>'+esc(d.qty.verdict)+'</p>';
+  $('qtyBands').innerHTML=d.qty.bands.map(function(b){ return '<div style="margin:6px 0"><b>'+esc(b.label)+'</b> — Avg delay '+fh(b.avgDelay)+' • Breach '+fp(b.breachPct)+' • '+nf(b.n)+' transfers</div>'; }).join('');
+}
+
+function resetFilters(){ ['fOrigin','fDest','fCompany','fStatus','fRoute','fSearch'].forEach(function(id){ $(id).value=''; }); loadData(); }
+$('apply').addEventListener('click', loadData);
+$('refresh').addEventListener('click', loadData);
+$('reset').addEventListener('click', resetFilters);
+$('fSearch').addEventListener('keydown', function(e){ if(e.key==='Enter') loadData(); });
+['fOrigin','fDest','fCompany','fStatus','fRoute'].forEach(function(id){ $(id).addEventListener('change', loadData); });
+loadData();
+</script>
+</body>
+</html>
